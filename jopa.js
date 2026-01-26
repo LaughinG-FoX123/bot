@@ -4,7 +4,7 @@ const { Bot, InlineKeyboard } = require("grammy");
 // Создаём объект бота
 const bot = new Bot("8242094324:AAHMatw9XhDaiC7TXXetPLB33EPpzXSCRQ0"); // <-- place your bot token in this string
 
-const userStat = new Map();
+const userStat = [];
 
 // Функция для приветствия пользователя
 bot.command('start', async (ctx) => {
@@ -15,17 +15,28 @@ bot.command('start', async (ctx) => {
     console.log("Приветствие отправлено пользователю: " + userName);
 });
 
+bot.command('history', (ctx) => {
+
+})
+
 // Функция для команды /help
 bot.command('help', async (ctx) => {
     const helpMessage =
         `Доступные команды:
         /start: Приветствие и описание возможностей бота
+        /history: выводит пять последних вопросов
         /help: Список доступных команд
         ;`
     await ctx.reply(helpMessage);
     console.log('Пользователь запросил помощь.');
 });
 
+function answerQuestion(question) {
+    const answers = ["Да, это вполне вероятно", "Безусловно, такое может произойти", "Шансы очень высоки", "Всё к этому идёт", "Это более чем реально", "Да, при текущих условиях это ожидаемо", "Вероятность близка к стопроцентной", "Все предпосылки для этого есть", "Шансы пятьдесят на пятьдесят", "Вполне возможно, но не факт", "Исход неочевиден, может случиться по-разному", "Вероятность существует, но она невелика", "Слишком много переменных, чтобы дать точный прогноз", "Это не предопределено, но и исключать нельзя", "Вероятность есть, как и вероятность альтернативного сценария", "Случиться может, а может и нет", "Крайне маловероятно", "Нет, предпосылок для этого не наблюдается", "Вероятность стремится к нулю", "Скорее всего, этого не произойдёт"]
+
+
+    return answers[Math.floor(Math.random() * 20)]
+}
 
 // Функция для обработки текстовых сообщений
 bot.on('message:text', async (ctx) => {
@@ -40,52 +51,33 @@ bot.on('message:text', async (ctx) => {
     }
 
     if (userMessage.length === 0) {
-        await ctx.reply('Пожалуйста, введите текст.');
+        await ctx.reply('Пожалуйста, введите вопрос.');
         console.log('Пользователь отправил пустое сообщение или только пробелы.');
     } else {
-        const reversedMessage = userMessage.split('').reverse().join('');
-        await ctx.reply("Наоборот: " + reversedMessage);
-        console.log("Ответ на сообщение: " + reversedMessage);
+
+        if (userMessage.endsWith("?")) {
+            ctx.reply(answerQuestion())
+        }else {
+            ctx.reply('Пожалуйста, введите вопрос.')
+        }
+        
+        await ctx.reply();
+        console.log();
     }
 })
 
-function play(ctx) {
-    let isWin = Math.random() >= 0.5;
-    let choose = ctx.match;
-
-    updateUserScore(ctx.from.id, isWin)
-
-    if (isWin) {
-        if (choose == "reshka") {
-            ctx.reply("Выпала решка, победа", { reply_markup: playAgain });
-        } else {
-            ctx.reply("Выпал орел, победа", { reply_markup: playAgain });
-        }
-    } else {
-        if (choose == "reshka") {
-            ctx.reply("Выпал орел, поражение", { reply_markup: playAgain });
-        } else {
-            ctx.reply("Выпала решка, поражение", { reply_markup: playAgain });
-        }
-    }
-}
 
 const menuKeyboard = new InlineKeyboard()
-    .text("Начать игру", "start_game")
-    .text("Статистика", "statistic")
+    .text("Задать вопрос", "ask_question")
+    .text("История", "history")
 
-const playKeyboard = new InlineKeyboard()
-    .text("Орел", "orel")
-    .text("Решка", "reshka")
-
-const playAgain = new InlineKeyboard()
-    .text("Сыграть еще раз", "play_again")
-
-bot.callbackQuery('start_game', (ctx) => {
+bot.callbackQuery('ask_question', (ctx) => {
     ctx.deleteMessage();
     ctx.answerCallbackQuery();
-    ctx.reply("Выбери", { reply_markup: playKeyboard });
+    ctx.reply("Задайте вопрос: ");
 })
+
+
 
 bot.callbackQuery('statistic', (ctx) => {
     ctx.deleteMessage();
@@ -96,23 +88,6 @@ bot.callbackQuery('statistic', (ctx) => {
     ctx.reply(`Побед: ${user.wins}, Поражений: ${user.loses}`);
 })
 
-bot.callbackQuery('orel', (ctx) => {
-    ctx.deleteMessage();
-    ctx.answerCallbackQuery();
-    play(ctx);
-})
-
-bot.callbackQuery('reshka', (ctx) => {
-    ctx.deleteMessage();
-    ctx.answerCallbackQuery();
-    play(ctx);
-})
-
-bot.callbackQuery('play_again', (ctx) => {
-    ctx.deleteMessage();
-    ctx.answerCallbackQuery();
-    ctx.reply("Выбери", { reply_markup: playKeyboard });
-})
 
 // Обработка ошибок
 bot.catch((err) => {
@@ -129,16 +104,24 @@ if (userStat.get(user_id)) return;
     console.log('Пользователь сохранён: ', userStat)
 }
 
-function updateUserScore(user_id, isWin) {
+function updateUserHistory(user_id, question) {
     if(!userStat.get(user_id)) saveUser(user_id);
 
     let user = userStat.get(user_id)
+    if (userStat.length() == 5) {
+        let temp1 = userStat[1]
+        let temp2 = userStat[2]
+        let temp3 = userStat[3]
+        let temp4 = userStat[4]
 
-    if (isWin) {
-        user.wins += 1;
-    } else {
-        user.loses += 1;
+        userStat[0] = temp1
+        userStat[1] = temp2
+        userStat[2] = temp3
+        userStat[3] = temp4
+
+        userStat[4] = question
     }
+    userStat.add(question)
 }
 
 // Запуск бота
